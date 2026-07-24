@@ -1,9 +1,13 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import userModel from "../models/userModel.js";
+import transporter from "../config/nodeMailer.js";
 
 export const register = async (req, res) => {
-  const { user, email, password } = req.body;
+  const { name, email, password } = req.body;
+
+  console.log(req.body);
+  console.log(name, email, password);
 
   if (!name || !email || !password) {
     return res.json({ success: false, message: "Missing details" });
@@ -16,7 +20,7 @@ export const register = async (req, res) => {
       return res.json({ success: false, message: "User already exists" });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new userModel({ user, email, password: hashedPassword });
+    const user = new userModel({ name, email, password: hashedPassword });
 
     await user.save();
 
@@ -30,6 +34,18 @@ export const register = async (req, res) => {
       sameSite: process.env.NODE_ENV === "prodution" ? "none" : "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
+    // Sending MAil
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "welcome to smart LMS",
+      text: `welcome to our smart Lms. Your account has been created 
+      with email id: ${email}`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     return res.json({
       success: true,
@@ -59,7 +75,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passsword);
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.json({
@@ -97,8 +113,8 @@ export const logout = async (req, res) => {
     });
 
     return res.json({
-        success: true,
-        message: "Logged out successfully",
+      success: true,
+      message: "Logged out successfully",
     });
   } catch (error) {
     return res.json({ success: false, message: error.message });
